@@ -15,9 +15,11 @@ const ImageSaver = require('./utils/ImageSaver');
 // ImageSaver.saveTwitterImage("1559998238597730304");
 
 // Retweeted
-ImageSaver.saveTwitterImage("1560143617419022336");
+// ImageSaver.saveTwitterImage("1560143617419022336");
 // Origin
 // ImageSaver.saveTwitterImage("1560135603877859328");
+// Reply
+ImageSaver.saveTwitterImage("1560362050106171393");
 
 /**
  * End of test
