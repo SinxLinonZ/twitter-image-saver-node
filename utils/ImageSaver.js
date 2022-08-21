@@ -39,10 +39,14 @@ module.exports = {
 
                 if (!data.includes.media) return;
 
-                if (data.data.referenced_tweets?.length > 0 && data.data.referenced_tweets[0].type == "retweeted") {
-                    this.saveTwitterImage(data.data.referenced_tweets[0].id);
-                    console.log("Retweet detected");
-                    return;
+                if (data.data.referenced_tweets?.length > 0) {
+                    for (const tweet of data.data.referenced_tweets) {
+                        if (tweet.type == "retweeted") {
+                            this.saveTwitterImage(tweet.id);
+                            console.log("Retweet detected");
+                            return;
+                        }
+                    }
                 }
 
                 for (const media of data.includes.media) {
@@ -59,18 +63,30 @@ module.exports = {
                                 const ep = new exiftool.ExiftoolProcess(exiftoolBin);
                                 ep
                                     .open().then((pid) => console.log('Started exiftool process %s', pid))
-                                    .then(() => ep.writeMetadata(process.env.root + '/saves/' + fileName, {
-                                        all: '',
+                                    .then(() => {
+                                        let StorylineIdentifier = "none";
+                                        if (data.data.referenced_tweets?.length > 0) {
+                                            for (const tweet of data.data.referenced_tweets) {
+                                                if (tweet.type == "replied_to") {
+                                                    StorylineIdentifier = tweet.id;
+                                                    break;
+                                                }
+                                            }
+                                        }
 
-                                        "ArtworkDateCreated": data.data.created_at,
-                                        "ArtworkCreator": data.includes.users[0].name,
-                                        "ArtworkCreatorID": `@${data.includes.users[0].username}`,
-                                        "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
-                                        "ArtworkSource": data.data.id,
-                                        "StorylineIdentifier": data.data.referenced_tweets?.length > 0 ? data.data.referenced_tweets[0].id : "",
-                                        // "Description": data.data.text,
+                                        ep.writeMetadata(process.env.root + '/saves/' + fileName, {
+                                            all: '',
 
-                                    }, ['overwrite_original', 'codedcharacterset=utf8']))
+                                            "ArtworkDateCreated": data.data.created_at,
+                                            "ArtworkCreator": data.includes.users[0].name,
+                                            "ArtworkCreatorID": `@${data.includes.users[0].username}`,
+                                            "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
+                                            "ArtworkSource": data.data.id,
+                                            "StorylineIdentifier": StorylineIdentifier,
+                                            // "Description": data.data.text,
+
+                                        }, ['overwrite_original', 'codedcharacterset=utf8'])
+                                    })
                                     .then(null, console.error)
                                     // .then(() => ep.readMetadata(process.env.root + '/saves/' + fileName, ['-File:all']))
                                     // .then(console.log, console.error)
@@ -83,7 +99,7 @@ module.exports = {
                     }
                 }
 
-                
+
             });
     }
 }
