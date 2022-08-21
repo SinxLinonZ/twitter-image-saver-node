@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+    <script>
+
+        window.onload = function () {
+            fetch("./Faa3D7WaAAEjmGx.jpg")
+                .then((res) => {
+                    return res.blob();
+                }).then(async (data) => {
+                    let xmp = await data.text();
+
+                    xmp = xmp.substring(xmp.indexOf("<x:xmpmeta"), xmp.indexOf("</x:xmpmeta>") + 12);
+
+                    const parser = new DOMParser();
+                    xmp = parser.parseFromString(xmp, 'application/xml');
+
+                    console.log(xmp);
+                    console.log("AOContentDescription: " + xmp.getElementsByTagName("Iptc4xmpExt:AOContentDescription")[0].textContent.trim());
+                    console.log("AOCreator: " + xmp.getElementsByTagName("Iptc4xmpExt:AOCreator")[0].textContent.trim());
+                    console.log("AOCreatorId: " + xmp.getElementsByTagName("Iptc4xmpExt:AOCreatorId")[0].textContent.trim());
+                    console.log("AODateCreated: " + xmp.getElementsByTagName("Iptc4xmpExt:AODateCreated")[0].textContent.trim());
+                    console.log("AOSource: " + xmp.getElementsByTagName("Iptc4xmpExt:AOSource")[0].textContent.trim());
+                    if (xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier").length > 0) {
+                        console.log("StorylineIdentifier: " + xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier")[0].textContent.trim());
+                    } else {
+                        console.log("StorylineIdentifier: none");
+                    }
+
+
+                    const img = document.createElement("img");
+                    img.src = URL.createObjectURL(data);
+                    document.body.appendChild(img);
+
+
+                });
+        }
+
+    </script>
+
+</body>
+
+</html>

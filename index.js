@@ -8,10 +8,23 @@ process.env.root = __dirname;
 const ImageSaver = require('./utils/ImageSaver');
 
 
+/**
+ * Test
+ */
 // ImageSaver.saveTwitterImage("1560329379254652930");
 // ImageSaver.saveTwitterImage("1559998238597730304");
 
+// Retweeted
+ImageSaver.saveTwitterImage("1560143617419022336");
+// Origin
+// ImageSaver.saveTwitterImage("1560135603877859328");
+
+/**
+ * End of test
+ */
+
 // let url = "https://api.twitter.com/2/tweets/search/recent?query=from%3A__H_kys__&start_time=2022-08-13T09%3A00%3A00Z&max_results=100";
+// let url = "https://api.twitter.com/2/tweets/search/recent?query=from%3A__H_kys__&max_results=100";
 // https.get(url, {
 //     headers: {
 //         Authorization: "Bearer " + process.env.TWITTER_BEARER_TOKEN
@@ -33,11 +46,11 @@ const ImageSaver = require('./utils/ImageSaver');
 // });
 
 
-const ep = new exiftool.ExiftoolProcess(exiftoolBin);
-ep
-  .open()
-  // read directory
-  .then(() => ep.readMetadata(process.env.root + "/saves", ['-File:all']))
-  .then(console.log, console.error)
-  .then(() => ep.close())
-  .catch(console.error)
+// const ep = new exiftool.ExiftoolProcess(exiftoolBin);
+// ep
+//   .open()
+//   // read directory
+//   .then(() => ep.readMetadata(process.env.root + "/saves", ['-File:all']))
+//   .then(console.log, console.error)
+//   .then(() => ep.close())
+//   .catch(console.error)

@@ -31,12 +31,19 @@ module.exports = {
 
         TwitterParser.getTweet(tweetId, filter)
             .then(data => {
+
                 if (data.includes?.media?.length == 0) {
                     console.log("No media found");
                     return;
                 }
 
                 if (!data.includes.media) return;
+
+                if (data.data.referenced_tweets?.length > 0 && data.data.referenced_tweets[0].type == "retweeted") {
+                    this.saveTwitterImage(data.data.referenced_tweets[0].id);
+                    console.log("Retweet detected");
+                    return;
+                }
 
                 for (const media of data.includes.media) {
                     if (media.type == "photo") {
