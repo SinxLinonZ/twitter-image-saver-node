@@ -13,7 +13,8 @@ module.exports = {
     saveTwitterImage: function (tweetId) {
         const filter = {
             "tweet.fields": [
-                "created_at"
+                "created_at",
+                "entities",
             ].join(','),
             "expansions": [
                 "attachments.media_keys",
@@ -83,6 +84,7 @@ module.exports = {
                                             "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
                                             "ArtworkSource": data.data.id,
                                             "StorylineIdentifier": StorylineIdentifier,
+                                            "GenreCvId+": data.data.entities.hashtags.map(hashtag => hashtag.tag).join("<br>"),
                                             // "Description": data.data.text,
 
                                         }, ['overwrite_original', 'codedcharacterset=utf8'])

@@ -36,6 +36,11 @@
                     } else {
                         console.log("StorylineIdentifier: none");
                     }
+                    if (xmp.getElementsByTagName("Iptc4xmpExt:Genre").length > 0) {
+                        console.log("Genre: " + xmp.getElementsByTagName("Iptc4xmpExt:Genre")[0].textContent.trim());
+                    } else {
+                        console.log("Genre: none");
+                    }
 
 
                     const img = document.createElement("img");
