@@ -19,11 +19,17 @@ const ImageSaver = require('./utils/ImageSaver');
 // Origin
 // ImageSaver.saveTwitterImage("1560135603877859328");
 // Reply
-ImageSaver.saveTwitterImage("1560362050106171393");
+// ImageSaver.saveTwitterImage("1560362050106171393");
+// ImageSaver.saveTwitterImage("1560362050106171393", true);
+
+ImageSaver.saveLikes("1205849891236245504", false, true);
+
 
 /**
  * End of test
  */
+
+
 
 // let url = "https://api.twitter.com/2/tweets/search/recent?query=from%3A__H_kys__&start_time=2022-08-13T09%3A00%3A00Z&max_results=100";
 // let url = "https://api.twitter.com/2/tweets/search/recent?query=from%3A__H_kys__&max_results=100";
