@@ -6,49 +6,169 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+    <link rel="stylesheet" href="/frontend/PhotoSwipe/photoswipe.css">
+    <link rel="stylesheet" href="/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.css">
+
 </head>
 
 <body>
 
+    <script type="module">
+        import PhotoSwipeLightbox from '/frontend/PhotoSwipe/photoswipe-lightbox.esm.js';
+        import PhotoSwipeDynamicCaption from '/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.esm.js';
+
+        const lightbox = new PhotoSwipeLightbox({
+            gallery: '#gallery',
+            children: 'a',
+            showHideAnimationType: 'zoom',
+            bgOpacity: 0.95,
+            loop: false,
+            wheelToZoom: true,
+            clickToCloseNonZoomable: false,
+            pswpModule: () => import('/frontend/PhotoSwipe/photoswipe.esm.js'),
+        });
+
+        const captionPlugin = new PhotoSwipeDynamicCaption(lightbox, {
+            type: 'aside',
+        });
+
+        lightbox.init();
+    </script>
+
+    <br>
+    <span onclick="onClickHandler()" style="background-color: green; color: white; padding: 10px; user-select: none;">
+        click here to load
+    </span>
+
+    <div class="pswp-gallery docs-styled-scrollbar" id="gallery"
+        style="align-items: flex-start;display: flex;flex-direction: row;flex-wrap: wrap;">
+    </div>
+
+
+
+
+    <style>
+        a img {
+            max-height: 224px;
+        }
+
+        a {
+            margin: 5px;
+        }
+
+        a:hover {
+            -webkit-filter: brightness(85%);
+            filter: brightness(85%);
+            -webkit-transition: all 100ms ease;
+            -moz-transition: all 100ms ease;
+            -o-transition: all 100ms ease;
+            -ms-transition: all 100ms ease;
+            transition: all 100ms ease;
+        }
+    </style>
+
 
     <script>
 
-        window.onload = function () {
-            fetch("./test.jpg")
-                .then((res) => {
-                    return res.blob();
-                }).then(async (data) => {
-                    let xmp = await data.text();
+        async function onClickHandler(event) {
+            try {
+                const directoryHandle = await window.showDirectoryPicker()
+                const files = await listAllFilesAndDirs(directoryHandle);
+                // console.log('files', files);
 
-                    xmp = xmp.substring(xmp.indexOf("<x:xmpmeta"), xmp.indexOf("</x:xmpmeta>") + 12);
+                for (const file of files) {
+                    const handle = await file.handle.getFile();
+                    // console.log(handle);
 
-                    const parser = new DOMParser();
-                    xmp = parser.parseFromString(xmp, 'application/xml');
+                    getHeightAndWidthFromDataUrl(URL.createObjectURL(handle))
+                        .then((imageSize) => {
+                            handle.text()
+                                .then((text) => {
+                                    let XMP = readXMPData(getXMPString(text));
+                                    // console.log(JSON.stringify(XMP, null, 2));
 
-                    console.log(xmp);
-                    console.log("AOContentDescription: " + xmp.getElementsByTagName("Iptc4xmpExt:AOContentDescription")[0].textContent.trim());
-                    console.log("AOCreator: " + xmp.getElementsByTagName("Iptc4xmpExt:AOCreator")[0].textContent.trim());
-                    console.log("AOCreatorId: " + xmp.getElementsByTagName("Iptc4xmpExt:AOCreatorId")[0].textContent.trim());
-                    console.log("AODateCreated: " + xmp.getElementsByTagName("Iptc4xmpExt:AODateCreated")[0].textContent.trim());
-                    console.log("AOSource: " + xmp.getElementsByTagName("Iptc4xmpExt:AOSource")[0].textContent.trim());
-                    if (xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier").length > 0) {
-                        console.log("StorylineIdentifier: " + xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier")[0].textContent.trim());
-                    } else {
-                        console.log("StorylineIdentifier: none");
-                    }
-                    if (xmp.getElementsByTagName("Iptc4xmpExt:Genre").length > 0) {
-                        console.log("Genre: " + xmp.getElementsByTagName("Iptc4xmpExt:Genre")[0].textContent.trim());
-                    } else {
-                        console.log("Genre: none");
-                    }
+                                    const url = URL.createObjectURL(handle);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.setAttribute('target', '_blank');
+                                    a.setAttribute('data-pswp-width', imageSize.width);
+                                    a.setAttribute('data-pswp-height', imageSize.height);
+                                    const img = document.createElement("img");
+                                    img.src = url;
 
+                                    const caption = document.createElement('span');
+                                    caption.className = 'pswp-caption-content';
+                                    caption.innerHTML = "";
+                                    caption.innerHTML += `<b>${XMP.AOCreator}</b> ${XMP.AOCreatorId}<br>`;
+                                    caption.innerHTML += `<span style="color: grey">${XMP.AODateCreated.toLocaleString()}</span><br><br>`;
+                                    caption.innerHTML += XMP.AOContentDescription + "<br><br>";
+                                    caption.innerHTML += `<span style="color: grey; text-decoration: underline; cursor: pointer;" onclick="window.open('https://twitter.com/${XMP.AOCreatorId}/status/${XMP.AOSource}', '_blank')">Tweet ID: ${XMP.AOSource}</span><br>`;
+                                    if (XMP.StorylineIdentifier != "none") {
+                                        caption.innerHTML += `<span style="color: grey">Referenced tweet ID: ${XMP.StorylineIdentifier}</span><br>`;
+                                    }
+                                    if (XMP.Genre.length > 0) {
+                                        caption.innerHTML += `<span style="color: grey">Tags: ${XMP.Genre.join(", ")}</span><br>`;
+                                    }
 
-                    const img = document.createElement("img");
-                    img.src = URL.createObjectURL(data);
-                    document.body.appendChild(img);
+                                    a.appendChild(img);
+                                    a.appendChild(caption);
+                                    document.getElementById("gallery").appendChild(a);
+                                });
+                        })
+                }
+            } catch (e) {
+                console.log(e);
+            }
+        }
 
+        async function getHeightAndWidthFromDataUrl(dataURL) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve({ width: img.width, height: img.height });
+                img.onerror = reject;
+                img.src = dataURL;
+            });
+        }
 
-                });
+        async function listAllFilesAndDirs(dirHandle) {
+            const files = [];
+            for await (let [name, handle] of dirHandle) {
+                // console.log(handle);
+                const { kind } = handle;
+                if (handle.kind === 'directory') {
+                    // files.push({ name, handle, kind });
+                    files.push(...await listAllFilesAndDirs(handle));
+                } else {
+                    files.push({ name, handle, kind });
+                }
+            }
+            return files;
+        }
+
+        function getXMPString(string) {
+            return string.substring(string.indexOf("<x:xmpmeta"), string.indexOf("</x:xmpmeta>") + 12);
+        }
+
+        function readXMPData(xmpString) {
+
+            const parser = new DOMParser();
+            xmp = parser.parseFromString(xmpString, 'application/xml');
+
+            return {
+                AOContentDescription: xmp.getElementsByTagName("Iptc4xmpExt:AOContentDescription")[0].textContent.trim(),
+                AOCreator: xmp.getElementsByTagName("Iptc4xmpExt:AOCreator")[0].textContent.trim(),
+                AOCreatorId: xmp.getElementsByTagName("Iptc4xmpExt:AOCreatorId")[0].textContent.trim(),
+                AODateCreated: new Date(xmp.getElementsByTagName("Iptc4xmpExt:AODateCreated")[0].textContent.trim()),
+                AOSource: xmp.getElementsByTagName("Iptc4xmpExt:AOSource")[0].textContent.trim(),
+                StorylineIdentifier:
+                    xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier").length > 0
+                        ? xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier")[0].textContent.trim()
+                        : "none",
+                Genre: xmp.getElementsByTagName("Iptc4xmpExt:Genre").length > 0
+                    ? xmp.getElementsByTagName("Iptc4xmpExt:Genre")[0].textContent.trim().split("<br>")
+                    : [],
+            };
         }
 
     </script>
