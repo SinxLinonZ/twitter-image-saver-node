@@ -8,7 +8,9 @@
     <title>Document</title>
 
     <link rel="stylesheet" href="/frontend/PhotoSwipe/photoswipe.css">
-    <link rel="stylesheet" href="/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.css">
+    <link rel="stylesheet"
+        href="/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.css">
+    <script src="/frontend/jquery-3.6.0.min.js"></script>
 
 </head>
 
@@ -40,6 +42,8 @@
     <span onclick="onClickHandler()" style="background-color: green; color: white; padding: 10px; user-select: none;">
         click here to load
     </span>
+    <br><br>
+    <hr>
 
     <div class="pswp-gallery docs-styled-scrollbar" id="gallery"
         style="align-items: flex-start;display: flex;flex-direction: row;flex-wrap: wrap;">
@@ -94,6 +98,7 @@
                                     a.setAttribute('target', '_blank');
                                     a.setAttribute('data-pswp-width', imageSize.width);
                                     a.setAttribute('data-pswp-height', imageSize.height);
+                                    a.setAttribute('data-tweetid', XMP.AOSource);
                                     const img = document.createElement("img");
                                     img.src = url;
 
@@ -114,6 +119,13 @@
                                     a.appendChild(img);
                                     a.appendChild(caption);
                                     document.getElementById("gallery").appendChild(a);
+
+                                    var $wrapper = $('#gallery');
+
+                                    $wrapper.find('a').sort(function (a, b) {
+                                        return +a.dataset.tweetid - +b.dataset.tweetid;
+                                    })
+                                        .appendTo($wrapper);
                                 });
                         })
                 }
