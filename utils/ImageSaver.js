@@ -7,49 +7,46 @@ const TwitterParser = require('./TwitterParser');
 
 module.exports = {
 
-    saveLikes: function (userId, nextToken = false, recursive = false) {
+    saveLikes: async function (userId, nextToken = false, recursive = false) {
         const url = `https://api.twitter.com/2/users/${userId}/liked_tweets`;
         const query = nextToken ? `?pagination_token=${nextToken}` : "";
-        https.get(url + query, {
-            headers: {
-                Authorization: "Bearer " + process.env.TWITTER_BEARER_TOKEN
-            }
-        }, (res) => {
-            let body = '';
-            res.on('data', (chunk) => {
-                body += chunk;
-            }).on('end', () => {
-                let data = JSON.parse(body);
-
-                const total = data.data.length;
-                let counter = 0;
-                for (const tweet of data.data) {
-                    this.saveTwitterImage(tweet.id, recursive)
-                        .then(() => {
-                            counter++;
-                            console.log(`${counter}/${total}`);
-                            if (counter == total) {
-                                const rl = readline.createInterface({
-                                    input: process.stdin,
-                                    output: process.stdout
-                                });
-                                rl.question("Fetch next page?[y/N] ", (answer) => {
-                                    if (answer.toLowerCase() == "y") {
-                                        this.saveLikes(userId, data.meta.next_token, true);
-                                    }
-                                    rl.close();
-                                });
-                            }
-                        });
+        const res = await new Promise((resolve, reject) => {
+            https.get(url + query, {
+                headers: {
+                    Authorization: "Bearer " + process.env.TWITTER_BEARER_TOKEN
                 }
-
-            }).on('error', (err) => {
-                console.log(err);
+            }, (res) => {
+                let body = '';
+                res.on('data', (chunk) => {
+                    body += chunk;
+                }).on('end', () => {
+                    resolve(body);
+                });
             });
         });
+
+        let data = JSON.parse(res);
+        let total = data.data.length;
+        for (let i = 0; i < data.data.length; i++) {
+            const tweet = data.data[i];
+            await this.saveTwitterImage(tweet.id, true);
+            console.log(`${i}/${total}`);
+        }
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        rl.question("Fetch next page?[y/N] ", (answer) => {
+            if (answer.toLowerCase() == "y") {
+                this.saveLikes(userId, data.meta.next_token, true);
+            }
+            rl.close();
+        });
+
     },
 
-    saveTwitterImage: function (tweetId, recursive = false) {
+    saveTwitterImage: async function (tweetId, recursive = false) {
         const filter = {
             "tweet.fields": [
                 "created_at",
@@ -69,94 +66,81 @@ module.exports = {
             ].join(','),
         };
 
-        return new Promise((resolve, reject) => {
-            TwitterParser.getTweet(tweetId, filter)
-                .then(data => {
+        const data = await TwitterParser.getTweet(tweetId, filter);
+        if (!data.includes) return;
+        if (!data.includes.media) {
+            console.log("No media found");
+            return;
+        }
+        if (data.errors || data.status == 429) {
+            console.log("Rate limit exceeded");
+            return;
+        }
 
-                    if (!data.includes) { resolve(); return; }
-                    if (!data.includes.media) {
-                        console.log("No media found");
-                        resolve();
-                        return;
-                    }
-                    if (data.errors || data.status == 429) {
-                        console.log("Rate limit exceeded");
-                        resolve();
-                        return;
-                    }
-
-                    let retweet_flag = false;
-                    if (data.data.referenced_tweets?.length > 0) {
-                        for (const tweet of data.data.referenced_tweets) {
-                            if (tweet.type == "retweeted") {
-                                console.log("Retweet detected");
-                                retweet_flag = true;
-                                this.saveTwitterImage(tweet.id, recursive).then(resolve());
-                                break;
-                            }
-                        }
-                    }
+        if (data.data.referenced_tweets?.length > 0) {
+            for (let i = 0; i < data.data.referenced_tweets.length; i++) {
+                const referencedTweet = data.data.referenced_tweets[i];
+                if (referencedTweet.type == "retweeted") {
+                    console.log("Retweet detected");
+                    await this.saveTwitterImage(referencedTweet.id, recursive);
+                    return;
+                }
+            }
+        }
 
 
-                    if (!retweet_flag) {
-                        // for (const media of data.includes.media) {
-                        for (let i = 0; i < data.includes.media.length; i++) {
-                            let media = data.includes.media[i];
-                            if (media.type == "photo") {
-                                // save photo
-                                console.log(media.url + "?name=orig");
-                                const fileName = media.url.split('/').pop();
-                                const file = fs.createWriteStream(process.env.root + '/saves/' + fileName);
-                                https.get(media.url + "?name=orig", (response) => {
-                                    response.pipe(file).on('close', () => {
-                                        console.log("Downloaded " + fileName);
-                                        file.close();
+        for (let i = 0; i < data.includes.media.length; i++) {
+            const media = data.includes.media[i];
+            if (media.type == "photo") {
+                // save photo
+                console.log(media.url + "?name=orig");
+                const fileName = media.url.split('/').pop();
+                const file = fs.createWriteStream(process.env.root + '/saves/' + fileName);
 
-                                        const ep = new exiftool.ExiftoolProcess(exiftoolBin);
-                                        ep
-                                            .open().then((pid) => console.log('Started exiftool process %s', pid))
-                                            .then(() => {
-                                                let StorylineIdentifier = [];
-                                                if (data.data.referenced_tweets?.length > 0) {
-                                                    for (const tweet of data.data.referenced_tweets) {
-                                                        if (tweet.type == "replied_to") {
-                                                            StorylineIdentifier.push(tweet.id);
-                                                            if (recursive) {
-                                                                console.log("Saving refrence: " + tweet.id);
-                                                                this.saveTwitterImage(tweet.id, true);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                                ep.writeMetadata(process.env.root + '/saves/' + fileName, {
-                                                    all: '',
-
-                                                    "ArtworkDateCreated": data.data.created_at,
-                                                    "ArtworkCreator": data.includes.users[0].name,
-                                                    "ArtworkCreatorID": `@${data.includes.users[0].username}`,
-                                                    "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
-                                                    "ArtworkSource": data.data.id,
-                                                    "ArtworkSourceInventoryNo": i.toString(),
-                                                    "StorylineIdentifier": StorylineIdentifier.length > 0 ?
-                                                        StorylineIdentifier.join('<br>') : "none",
-                                                    "GenreCvId+": data.data.entities.hashtags ?
-                                                        data.data.entities.hashtags.map(hashtag => hashtag.tag).join("<br>") : "",
-
-                                                }, ['overwrite_original', 'codedcharacterset=utf8'])
-                                            })
-                                            .then(null, console.error)
-                                            // .then(() => ep.readMetadata(process.env.root + '/saves/' + fileName, ['-File:all']))
-                                            // .then(console.log, console.error)
-                                            .then(() => ep.close())
-                                            .then(() => { resolve() })
-                                            .catch(console.error)
-                                    });
-                                });
-                            }
-                        }
-                    }
+                await new Promise(async (resolve, reject) => {
+                    https.get(media.url + "?name=orig", (response) => {
+                        response.pipe(file).on('close', () => {
+                            console.log("Downloaded " + fileName);
+                            file.close();
+                            resolve();
+                        });
+                    });
                 });
-        });
+
+                const ep = new exiftool.ExiftoolProcess(exiftoolBin);
+                const pid = await ep.open();
+                console.log('Started exiftool process %s', pid);
+
+                let StorylineIdentifier = [];
+                if (data.data.referenced_tweets?.length > 0) {
+                    for await (const tweet of data.data.referenced_tweets) {
+                        if (tweet.type == "replied_to") {
+                            StorylineIdentifier.push(tweet.id);
+                            if (recursive) {
+                                console.log("Saving refrence: " + tweet.id);
+                                await this.saveTwitterImage(tweet.id, true);
+                            }
+                        }
+                    }
+                }
+                await ep.writeMetadata(process.env.root + '/saves/' + fileName, {
+                    all: '',
+
+                    "ArtworkDateCreated": data.data.created_at,
+                    "ArtworkCreator": data.includes.users[0].name,
+                    "ArtworkCreatorID": `@${data.includes.users[0].username}`,
+                    "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
+                    "ArtworkSource": data.data.id,
+                    "ArtworkSourceInventoryNo": i.toString(),
+                    "StorylineIdentifier": StorylineIdentifier.length > 0 ?
+                        StorylineIdentifier.join('<br>') : "none",
+                    "GenreCvId+": data.data.entities.hashtags ?
+                        data.data.entities.hashtags.map(hashtag => hashtag.tag).join("<br>") : "",
+
+                }, ['overwrite_original', 'codedcharacterset=utf8']);
+                await ep.close();
+
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 const https = require('https');
 
 module.exports = {
-    getTweet: function (tweetId, options) {
+    getTweet: async function (tweetId, options) {
         let url = "https://api.twitter.com/2/tweets/" + tweetId;
         let query = "";
         if (options) {
@@ -9,7 +9,7 @@ module.exports = {
                 return key + "=" + options[key];
             }).join("&");
         }
-        return new Promise((resolve, reject) => {
+        const res = await new Promise((resolve, reject) => {
             https.get(url + query, {
                 headers: {
                     Authorization: "Bearer " + process.env.TWITTER_BEARER_TOKEN
@@ -19,11 +19,13 @@ module.exports = {
                 res.on('data', (chunk) => {
                     body += chunk;
                 }).on('end', () => {
-                    resolve(JSON.parse(body));
+                    resolve(body);
                 }).on('error', (err) => {
                     reject(err);
                 });
             });
         });
+
+        return JSON.parse(res);
     }
 }
