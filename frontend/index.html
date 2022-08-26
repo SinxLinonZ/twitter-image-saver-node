@@ -11,6 +11,7 @@
     <link rel="stylesheet"
         href="/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.css">
     <script src="/frontend/jquery-3.6.0.min.js"></script>
+    <script src="/frontend/pica.min.js"></script>
 
 </head>
 
@@ -77,6 +78,7 @@
 
         async function onClickHandler(event) {
             try {
+                const _pica = new pica();
                 const directoryHandle = await window.showDirectoryPicker()
                 const files = await listAllFilesAndDirs(directoryHandle);
                 // console.log('files', files);
@@ -100,7 +102,20 @@
                                     a.setAttribute('data-pswp-height', imageSize.height);
                                     a.setAttribute('data-tweetid', XMP.AOSource);
                                     const img = document.createElement("img");
-                                    img.src = url;
+
+                                    const _thumbnail = new Image(imageSize.width, imageSize.height);
+                                    _thumbnail.src = url;
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = imageSize.width;
+                                    canvas.height = imageSize.height;
+                                    
+                                    _pica.resize(_thumbnail, canvas)
+                                    .then(result => _pica.toBlob(result, 'image/jpeg', 0.90))
+                                    .then(blob => {
+                                        img.src = URL.createObjectURL(blob);
+                                    });
+
+                                    // img.src = url;
 
                                     const caption = document.createElement('span');
                                     caption.className = 'pswp-caption-content';
