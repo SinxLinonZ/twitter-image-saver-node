@@ -123,6 +123,7 @@
                                     caption.innerHTML += `<b>${XMP.AOCreator}</b> ${XMP.AOCreatorId}<br>`;
                                     caption.innerHTML += `<span style="color: grey">${XMP.AODateCreated.toLocaleString()}</span><br><br>`;
                                     caption.innerHTML += XMP.AOContentDescription + "<br><br>";
+                                    caption.innerHTML += `<span style="color: grey">Resource order No.: ${XMP.AOSourceInvNo}</span><br>`;
                                     caption.innerHTML += `<span style="color: grey; text-decoration: underline; cursor: pointer;" onclick="window.open('https://twitter.com/${XMP.AOCreatorId}/status/${XMP.AOSource}', '_blank')">Tweet ID: ${XMP.AOSource}</span><br>`;
                                     if (XMP.StorylineIdentifier != "none") {
                                         caption.innerHTML += `<span style="color: grey">Referenced tweet ID: ${XMP.StorylineIdentifier}</span><br>`;
@@ -188,6 +189,7 @@
                 AOCreatorId: xmp.getElementsByTagName("Iptc4xmpExt:AOCreatorId")[0].textContent.trim(),
                 AODateCreated: new Date(xmp.getElementsByTagName("Iptc4xmpExt:AODateCreated")[0].textContent.trim()),
                 AOSource: xmp.getElementsByTagName("Iptc4xmpExt:AOSource")[0].textContent.trim(),
+                AOSourceInvNo: xmp.getElementsByTagName("Iptc4xmpExt:AOSourceInvNo")[0].textContent.trim(),
                 StorylineIdentifier:
                     xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier").length > 0
                         ? xmp.getElementsByTagName("Iptc4xmpExt:StorylineIdentifier")[0].textContent.trim()
