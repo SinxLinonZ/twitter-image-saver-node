@@ -99,7 +99,9 @@ module.exports = {
 
 
                     if (!retweet_flag) {
-                        for (const media of data.includes.media) {
+                        // for (const media of data.includes.media) {
+                        for (let i = 0; i < data.includes.media.length; i++) {
+                            let media = data.includes.media[i];
                             if (media.type == "photo") {
                                 // save photo
                                 console.log(media.url + "?name=orig");
@@ -135,6 +137,7 @@ module.exports = {
                                                     "ArtworkCreatorID": `@${data.includes.users[0].username}`,
                                                     "ArtworkContentDescription": data.data.text.split('\n').join('<br>'),
                                                     "ArtworkSource": data.data.id,
+                                                    "ArtworkSourceInventoryNo": i.toString(),
                                                     "StorylineIdentifier": StorylineIdentifier.length > 0 ?
                                                         StorylineIdentifier.join('<br>') : "none",
                                                     "GenreCvId+": data.data.entities.hashtags ?
