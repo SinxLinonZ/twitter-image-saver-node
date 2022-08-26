@@ -31,7 +31,7 @@ module.exports = {
         for (let i = 0; i < data.data.length; i++) {
             const tweet = data.data[i];
             await this.saveTwitterImage(tweet.id, true);
-            console.log(`${i}/${total}`);
+            console.log(`${i + 1}/${total}`);
         }
 
         const rl = readline.createInterface({
