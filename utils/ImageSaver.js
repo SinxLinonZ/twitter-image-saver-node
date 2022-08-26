@@ -4,6 +4,7 @@ const readline = require('readline');
 const exiftool = require('node-exiftool')
 const exiftoolBin = require('dist-exiftool')
 const TwitterParser = require('./TwitterParser');
+const sharp = require('sharp');
 
 module.exports = {
 
@@ -94,9 +95,13 @@ module.exports = {
             if (media.type == "photo") {
                 // save photo
                 console.log(media.url + "?name=orig");
-                const fileName = media.url.split('/').pop();
-                const file = fs.createWriteStream(process.env.root + '/saves/' + fileName);
 
+                const fileName = media.url.split('/').pop();
+                const savePath = process.env.root + '/saves/';
+                if (!fs.existsSync(savePath)) {
+                    fs.mkdirSync(savePath);
+                }
+                const file = fs.createWriteStream(savePath + fileName);
                 await new Promise(async (resolve, reject) => {
                     https.get(media.url + "?name=orig", (response) => {
                         response.pipe(file).on('close', () => {
@@ -107,9 +112,17 @@ module.exports = {
                     });
                 });
 
-                const ep = new exiftool.ExiftoolProcess(exiftoolBin);
-                const pid = await ep.open();
-                console.log('Started exiftool process %s', pid);
+                const thumbnailPath = process.env.root + '/saves/.thumbnails/';
+                if (!fs.existsSync(thumbnailPath)) {
+                    fs.mkdirSync(thumbnailPath);
+                }
+                const savedFile = fs.readFileSync(savePath + fileName);
+                const buffer = await sharp(savedFile)
+                    .resize(undefined, 224)
+                    .toBuffer();
+                fs.writeFileSync(thumbnailPath + ".thumbnail_" + fileName, buffer);
+
+                console.log("Saved thumbnail " + fileName);
 
                 let StorylineIdentifier = [];
                 if (data.data.referenced_tweets?.length > 0) {
@@ -123,6 +136,10 @@ module.exports = {
                         }
                     }
                 }
+
+                const ep = new exiftool.ExiftoolProcess(exiftoolBin);
+                const pid = await ep.open();
+                console.log('Started exiftool process %s', pid);
                 await ep.writeMetadata(process.env.root + '/saves/' + fileName, {
                     all: '',
 
