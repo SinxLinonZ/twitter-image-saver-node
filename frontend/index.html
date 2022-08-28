@@ -22,7 +22,7 @@
 
         const lightbox = new PhotoSwipeLightbox({
             gallery: '#gallery',
-            children: 'a',
+            children: 'a[style*="display: block"]',
             showHideAnimationType: 'zoom',
             bgOpacity: 0.95,
             loop: false,
@@ -39,10 +39,14 @@
     </script>
 
     <br>
-    <span onclick="onClickHandler()" style="background-color: green; color: white; padding: 10px; user-select: none;">
-        click here to load
-    </span>
-    <br><br>
+    <div style="user-select: none;">
+        <button onclick="onClickHandler()">load</button>
+        <label for="loadProgress">File load progress:</label>
+        <progress id="loadProgress" value="0" max="0"></progress>
+        <br>
+        By User ID: <input type="text" id="creatorIdFilter" oninput="creatorIdFilter(this.value)">
+
+    </div>
     <hr>
 
     <div class="pswp-gallery docs-styled-scrollbar" id="gallery"
@@ -75,6 +79,36 @@
 
     <script>
 
+        const timers = {
+            creatorIdFilter: null,
+        };
+        function creatorIdFilter(value) {
+            if (timers.creatorIdFilter) {
+                clearTimeout(timers.creatorIdFilter);
+            }
+
+            timers.creatorIdFilter = setTimeout(() => {
+                const keywords = value.replaceAll(' ', '').split(',').filter(x => x.length > 0);
+                if (keywords.length > 0) {
+                    document.querySelectorAll('#gallery a').forEach(a => {
+                        const creatorId = a.dataset.creatorid;
+                        let found = false;
+                        keywords.forEach(keyword => {
+                            if (creatorId.indexOf(keyword) >= 0) {
+                                found = true;
+                            }
+                        });
+                        a.style.display = found ? 'block' : 'none';
+                    });
+                } else {
+                    document.querySelectorAll('#gallery a').forEach(a => {
+                        a.style.display = 'block';
+                    });
+                }
+                timers.creatorIdFilter = null;
+            }, 500);
+        }
+
         async function onClickHandler(event) {
             try {
                 const directoryHandle = await window.showDirectoryPicker()
@@ -82,9 +116,13 @@
                 const files = filesCollection.files;
                 const thumbnails = filesCollection.thumbnails;
 
+                loadProgress.max = files.length;
+                loadProgress.value = 0;
                 let counter = 0;
+
                 for (const file of files) {
                     counter++;
+                    loadProgress.value++;
                     if (counter >= 500) {
                         sortImages();
                         counter = 0;
@@ -100,10 +138,14 @@
                     const url = URL.createObjectURL(handle);
                     const a = document.createElement('a');
                     a.href = url;
+                    a.style.display = 'block';
                     a.setAttribute('target', '_blank');
                     a.setAttribute('data-pswp-width', imageSize.width);
                     a.setAttribute('data-pswp-height', imageSize.height);
                     a.setAttribute('data-tweetid', XMP.AOSource);
+                    a.setAttribute('data-referencedtweetid', XMP.StorylineIdentifier);
+                    a.setAttribute('data-creator', XMP.AOCreator);
+                    a.setAttribute('data-creatorid', XMP.AOCreatorId);
                     a.setAttribute('data-order', XMP.AOSourceInvNo);
                     a.setAttribute('data-date', XMP.AODateCreated.getTime());
                     const img = document.createElement("img");
@@ -145,12 +187,10 @@
         function sortImages() {
             const $wrapper = $('#gallery');
             $wrapper.find('a').sort(function (a, b) {
-                if (a.dataset.date > b.dataset.date) {
-                    return -1;
-                }
                 if (a.dataset.tweetid == b.dataset.tweetid) {
                     return a.dataset.order - b.dataset.order;
                 }
+                return b.dataset.date - a.dataset.date;
             }).appendTo($wrapper);
         }
 
