@@ -5,6 +5,8 @@ const exiftool = require('node-exiftool')
 const exiftoolBin = require('dist-exiftool')
 const TwitterParser = require('./TwitterParser');
 const sharp = require('sharp');
+const cliProgress = require('cli-progress');
+const colors = require('ansi-colors');
 
 module.exports = {
 
@@ -28,12 +30,33 @@ module.exports = {
 
         let data = JSON.parse(res);
         let total = data.data.length;
+
+        const progress = new cliProgress.SingleBar({
+            format: 'Downloading |' + colors.cyan('{bar}') + '| {percentage}% || {value}/{total} Tweets',
+            barCompleteChar: '\u2588',
+            barIncompleteChar: '\u2591',
+            fps: 30,
+            forceRedraw: true,
+            hideCursor: true
+        });
+        progress.on('redraw-pre', () => {
+            process.stdout.cursorTo(0, 0);
+        });
+        progress.on('redraw-post', () => {
+            const termHeight = process.stdout.rows;
+            process.stdout.cursorTo(0, termHeight - 1);
+        });
+
+        progress.start(total, 0);
+        
         for (let i = 0; i < data.data.length; i++) {
             const tweet = data.data[i];
-            await this.saveTwitterImage(tweet.id, true);
-            console.log(`${i + 1}/${total}`);
+            await this.saveTwitterImage(tweet.id, recursive);
+            progress.update(i + 1);
         }
+        progress.stop();
 
+        console.log(`Pagination token: ${data.meta.next_token}`);
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -47,7 +70,7 @@ module.exports = {
 
     },
 
-    saveTwitterImage: async function (tweetId, recursive = false) {
+    saveTwitterImage: async function (tweetId, recursive = false, overwrite = false) {
         const filter = {
             "tweet.fields": [
                 "created_at",
@@ -101,6 +124,12 @@ module.exports = {
                 if (!fs.existsSync(savePath)) {
                     fs.mkdirSync(savePath);
                 }
+                
+                if (!overwrite && fs.existsSync(savePath + fileName)) {
+                    console.log("File already exists, skipping");
+                    continue;
+                }
+
                 const file = fs.createWriteStream(savePath + fileName);
                 await new Promise(async (resolve, reject) => {
                     https.get(media.url + "?name=orig", (response) => {
@@ -139,7 +168,7 @@ module.exports = {
 
                 const ep = new exiftool.ExiftoolProcess(exiftoolBin);
                 const pid = await ep.open();
-                console.log('Started exiftool process %s', pid);
+                console.log('Exiftool [%s]\t Saving metadata...', pid);
                 await ep.writeMetadata(process.env.root + '/saves/' + fileName, {
                     all: '',
 
@@ -156,7 +185,7 @@ module.exports = {
 
                 }, ['overwrite_original', 'codedcharacterset=utf8']);
                 await ep.close();
-
+                console.log('Exiftool [%s]\t Saved metadata', pid);
             }
         }
     }
