@@ -45,6 +45,7 @@
         <progress id="loadProgress" value="0" max="0"></progress>
         <br>
         By User ID: <input type="text" id="creatorIdFilter" oninput="creatorIdFilter(this.value)">
+        By Tags: <input type="text" id="hashTagFilter" oninput="hashTagFilter(this.value)">
 
     </div>
     <hr>
@@ -81,6 +82,7 @@
 
         const timers = {
             creatorIdFilter: null,
+            hashTagFilter: null,
         };
         function creatorIdFilter(value) {
             if (timers.creatorIdFilter) {
@@ -106,6 +108,32 @@
                     });
                 }
                 timers.creatorIdFilter = null;
+            }, 500);
+        }
+        function hashTagFilter(value) {
+            if (timers.hashTagFilter) {
+                clearTimeout(timers.hashTagFilter);
+            }
+
+            timers.hashTagFilter = setTimeout(() => {
+                const keywords = value.replaceAll(' ', '').split(',').filter(x => x.length > 0);
+                if (keywords.length > 0) {
+                    document.querySelectorAll('#gallery a').forEach(a => {
+                        const hashtags = a.dataset.hashtags;
+                        let found = false;
+                        keywords.forEach(keyword => {
+                            if (hashtags.indexOf(keyword) >= 0) {
+                                found = true;
+                            }
+                        });
+                        a.style.display = found ? 'block' : 'none';
+                    });
+                } else {
+                    document.querySelectorAll('#gallery a').forEach(a => {
+                        a.style.display = 'block';
+                    });
+                }
+                timers.hashTagFilter = null;
             }, 500);
         }
 
@@ -146,6 +174,7 @@
                     a.setAttribute('data-referencedtweetid', XMP.StorylineIdentifier);
                     a.setAttribute('data-creator', XMP.AOCreator);
                     a.setAttribute('data-creatorid', XMP.AOCreatorId);
+                    a.setAttribute('data-hashtags', XMP.Genre.join(','));
                     a.setAttribute('data-order', XMP.AOSourceInvNo);
                     a.setAttribute('data-date', XMP.AODateCreated.getTime());
                     const img = document.createElement("img");
@@ -175,7 +204,11 @@
                         caption.innerHTML += `<span style="color: grey">Referenced tweet ID: ${XMP.StorylineIdentifier}</span><br>`;
                     }
                     if (XMP.Genre.length > 0) {
-                        caption.innerHTML += `<span style="color: grey">Tags: ${XMP.Genre.join(", ")}</span><br>`;
+                        caption.innerHTML += `<span style="color: grey"
+                            onmouseover="this.style.cursor = 'pointer'; this.style['text-decoration'] = 'underline';"
+                            onmouseout="this.style.cursor = 'default'; this.style['text-decoration'] = 'none';"
+                            onclick="lightbox.pswp.close(); $('#hashTagFilter').val('${XMP.Genre.join(',')}'); hashTagFilter('${XMP.Genre.join(',')}');"
+                            >Tags: ${XMP.Genre.join(", ")}</span><br>`;
                     }
 
                     a.appendChild(img);
