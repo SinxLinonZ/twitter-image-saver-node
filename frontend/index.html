@@ -20,7 +20,7 @@
         import PhotoSwipeLightbox from '/frontend/PhotoSwipe/photoswipe-lightbox.esm.js';
         import PhotoSwipeDynamicCaption from '/frontend/PhotoSwipe/photoswipe-dynamic-caption-plugin/photoswipe-dynamic-caption-plugin.esm.js';
 
-        const lightbox = new PhotoSwipeLightbox({
+        window.lightbox = new PhotoSwipeLightbox({
             gallery: '#gallery',
             children: 'a[style*="display: block"]',
             showHideAnimationType: 'zoom',
@@ -161,7 +161,12 @@
                     const caption = document.createElement('span');
                     caption.className = 'pswp-caption-content';
                     caption.innerHTML = "";
-                    caption.innerHTML += `<b>${XMP.AOCreator}</b> ${XMP.AOCreatorId}<br>`;
+                    caption.innerHTML += `<span 
+                        onmouseover="this.style.cursor = 'pointer'; this.style['text-decoration'] = 'underline';"
+                        onmouseout="this.style.cursor = 'default'; this.style['text-decoration'] = 'none';"
+                        onclick="lightbox.pswp.close(); $('#creatorIdFilter').val('${XMP.AOCreatorId.substring(1)}'); creatorIdFilter('${XMP.AOCreatorId.substring(1)}');"
+                        >
+                        <b>${XMP.AOCreator}</b> ${XMP.AOCreatorId}</span><br>`;
                     caption.innerHTML += `<span style="color: grey">${XMP.AODateCreated.toLocaleString()}</span><br><br>`;
                     caption.innerHTML += XMP.AOContentDescription + "<br><br>";
                     caption.innerHTML += `<span style="color: grey">Resource order No.: ${XMP.AOSourceInvNo}</span><br>`;
