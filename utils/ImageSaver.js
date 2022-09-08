@@ -48,10 +48,29 @@ module.exports = {
         });
 
         progress.start(total, 0);
-        
+
         for (let i = 0; i < data.data.length; i++) {
             const tweet = data.data[i];
-            await this.saveTwitterImage(tweet.id, recursive);
+            let result = await this.saveTwitterImage(tweet.id, recursive);
+            if (result == 429) {
+                console.log("Too many requests, waiting 1 minute...");
+                await new Promise((resolve, reject) => {
+                    
+                    let sec = 0;
+                    let _counter = setInterval(() => {
+                        process.stdout.write(`\r${colors.yellow(sec)} seconds`);
+                        sec++;
+                    }, 1000);
+
+                    setTimeout(() => {
+                        clearInterval(_counter);
+                        resolve();
+                    }, 60 * 1000);
+                });
+                i--;
+                continue;
+            }
+
             progress.update(i + 1);
         }
         progress.stop();
@@ -91,6 +110,7 @@ module.exports = {
         };
 
         const data = await TwitterParser.getTweet(tweetId, filter);
+        if (data.status == 429) return 429;
         if (!data.includes) return;
         if (!data.includes.media) {
             console.log("No media found");
@@ -124,7 +144,7 @@ module.exports = {
                 if (!fs.existsSync(savePath)) {
                     fs.mkdirSync(savePath);
                 }
-                
+
                 if (!overwrite && fs.existsSync(savePath + fileName)) {
                     console.log("File already exists, skipping");
                     continue;
